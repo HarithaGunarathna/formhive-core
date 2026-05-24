@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2025 Formhive Contributors
+
 // NOTE: pnpm db:seed must be run before pnpm test.
 // The seed script must create a tenant with:
 //   id   = '00000000-0000-0000-0000-000000000001'

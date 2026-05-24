@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2025 Formhive Contributors
+
 /**
  * Creates (or re-keys) the single seed tenant used by integration tests.
  *

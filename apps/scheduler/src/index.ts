@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2025 Formhive Contributors
+
 // TODO: connect to Redis Streams (ioredis)
 // TODO: on startup, load active campaigns from DB and schedule cron jobs (node-cron)
 // TODO: each cron fires a `campaign.reminder.due` event on the Redis Stream

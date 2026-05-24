@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2025 Formhive Contributors
+
 import type { FastifyInstance } from 'fastify';
 import { eq, and, inArray, desc, sql } from 'drizzle-orm';
 import { db } from '../../../lib/db';

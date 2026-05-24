@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2025 Formhive Contributors
+
 import Redis from 'ioredis';
 
 const REDIS_URL = process.env.REDIS_URL;

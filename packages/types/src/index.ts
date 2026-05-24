@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2025 Formhive Contributors
+
 // API response envelope — all endpoints return this shape
 export interface ApiResponse<T> {
   data: T | null;
