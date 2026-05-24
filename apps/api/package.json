@@ -1,0 +1,36 @@
+{
+  "name": "@formhive/api",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:seed": "tsx src/scripts/seed.ts",
+    "lint": "eslint src --ext .ts",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@fastify/autoload": "^5.10.0",
+    "@fastify/cors": "^8.3.0",
+    "@fastify/env": "^4.4.0",
+    "@fastify/jwt": "^8.0.0",
+    "@formhive/db": "workspace:*",
+    "@formhive/events": "workspace:*",
+    "@formhive/types": "workspace:*",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.33.0",
+    "fastify": "^4.28.1",
+    "ioredis": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/node": "^20.14.12",
+    "@vitest/coverage-v8": "^4.1.7",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.7"
+  }
+}

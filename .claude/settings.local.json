@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "PowerShell(npm install -g pnpm 2>&1)",
+      "Bash(npx kill-port *)",
+      "Bash(pnpm --filter api dev)",
+      "Bash(curl -s http://localhost:3000/v1/auth/token -X POST -H \"Content-Type: application/json\" -d '{\"api_key\":\"wrong\"}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/v1/schemas)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/v1/recipients)"
+    ]
+  }
+}

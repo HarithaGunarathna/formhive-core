@@ -1,0 +1,24 @@
+{
+  "name": "@formhive/form",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "lint": "eslint src --ext .ts",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@fastify/env": "^4.4.0",
+    "@formhive/db": "workspace:*",
+    "@formhive/events": "workspace:*",
+    "@formhive/types": "workspace:*",
+    "fastify": "^4.28.1",
+    "ioredis": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.12",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4"
+  }
+}
