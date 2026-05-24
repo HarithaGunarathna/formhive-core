@@ -32,6 +32,12 @@ export interface FormField {
   required?: boolean;
   hint?: string;
   choices?: Array<{ value: string; label: string }>;
+  validation?: {
+    minimum?: number;
+    maximum?: number;
+    minLength?: number;
+    maxLength?: number;
+  };
 }
 
 export type CampaignStatus = 'draft' | 'active' | 'closed';

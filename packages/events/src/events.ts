@@ -6,6 +6,7 @@ import Redis from 'ioredis';
 // ─── Event names ──────────────────────────────────────────────────────────────
 
 export const EventName = {
+  CAMPAIGN_ACTIVATED: 'campaign.activated',
   CAMPAIGN_REMINDER_DUE: 'campaign.reminder.due',
   SUBMISSION_RECEIVED: 'submission.received',
   SUBMISSION_VALIDATED: 'submission.validated',
@@ -23,6 +24,12 @@ export const SUBMISSIONS_STREAM = 'formhive:submissions';
 export const NOTIFICATIONS_STREAM = 'formhive:notifications';
 
 // ─── Payload types ────────────────────────────────────────────────────────────
+
+export interface CampaignActivatedPayload {
+  campaignId: string;
+  tenantId: string;
+  submissionCount: number;
+}
 
 export interface CampaignReminderDuePayload {
   campaignId: string;

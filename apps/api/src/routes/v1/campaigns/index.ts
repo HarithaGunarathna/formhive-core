@@ -4,8 +4,9 @@
 import type { FastifyInstance } from 'fastify';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../../../lib/db';
-import { campaigns, submissions, formSchemas, recipients } from '@formhive/db';
+import { campaigns, submissions, formSchemas } from '@formhive/db';
 import { requireJwt } from '../../../lib/auth';
+import { activateCampaign, ServiceError } from '../../../services/campaign.service';
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -169,6 +170,22 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
       const { id } = request.params;
       const { status: newStatus } = request.body;
 
+      // Activation: delegate entirely to the service (token generation + event publish)
+      if (newStatus === 'active') {
+        try {
+          const updated = await activateCampaign(id);
+          return reply.send({ data: updated });
+        } catch (err) {
+          if (err instanceof ServiceError) {
+            return reply
+              .status(err.statusCode)
+              .send({ error: { code: err.code, message: err.message } });
+          }
+          throw err;
+        }
+      }
+
+      // Other transitions (active → closed)
       const [campaign] = await db
         .select({ id: campaigns.id, status: campaigns.status })
         .from(campaigns)
@@ -196,25 +213,6 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
         .set({ status: newStatus })
         .where(eq(campaigns.id, id))
         .returning();
-
-      // On activation, create one pending submission per tenant recipient
-      if (newStatus === 'active') {
-        const allRecipients = await db
-          .select({ ref: recipients.ref })
-          .from(recipients)
-          .where(eq(recipients.tenantId, DEFAULT_TENANT_ID));
-
-        if (allRecipients.length > 0) {
-          await db.insert(submissions).values(
-            allRecipients.map((r) => ({
-              tenantId: DEFAULT_TENANT_ID,
-              campaignId: id,
-              recipientRef: r.ref,
-              status: 'pending',
-            })),
-          );
-        }
-      }
 
       return reply.send({ data: updated });
     },

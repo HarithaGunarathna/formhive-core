@@ -266,6 +266,68 @@ describe('PATCH /v1/campaigns/:id', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().data).toHaveLength(RECIPIENT_REFS.length);
   });
+
+  describe('submission tokens', () => {
+    let campaignId: string;
+
+    beforeEach(async () => {
+      campaignId = await createDraftCampaign();
+      await app.inject({
+        method: 'PATCH',
+        url: `/v1/campaigns/${campaignId}`,
+        headers: authHeader(),
+        payload: { status: 'active' },
+      });
+    });
+
+    it('creates one submission token per recipient', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/v1/campaigns/${campaignId}/submissions`,
+        headers: authHeader(),
+      });
+      const { data } = res.json();
+      expect(data).toHaveLength(3);
+      data.forEach((s: { submissionToken: unknown; status: string }) => {
+        expect(s.submissionToken).toBeDefined();
+        expect(s.submissionToken).toHaveLength(21);
+        expect(s.status).toBe('pending');
+      });
+    });
+
+    it('all submission tokens are unique', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/v1/campaigns/${campaignId}/submissions`,
+        headers: authHeader(),
+      });
+      const tokens = res.json().data.map((s: { submissionToken: string }) => s.submissionToken);
+      expect(new Set(tokens).size).toBe(tokens.length);
+    });
+  });
+
+  it('activating twice does not create duplicate submissions', async () => {
+    const id = await createDraftCampaign();
+    await app.inject({
+      method: 'PATCH',
+      url: `/v1/campaigns/${id}`,
+      headers: authHeader(),
+      payload: { status: 'active' },
+    });
+    await app.inject({
+      method: 'PATCH',
+      url: `/v1/campaigns/${id}`,
+      headers: authHeader(),
+      payload: { status: 'closed' },
+    });
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/v1/campaigns/${id}`,
+      headers: authHeader(),
+      payload: { status: 'active' },
+    });
+    expect(res.statusCode).toBe(400);
+  });
 });
 
 describe('GET /v1/campaigns/:id/submissions', () => {
