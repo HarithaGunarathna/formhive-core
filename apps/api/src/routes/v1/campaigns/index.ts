@@ -32,6 +32,12 @@ interface CreateCampaignBody {
   status?: string;
 }
 
+interface PatchCampaignBody {
+  status?: string;
+  reminders?: ReminderInput[];
+  deadline?: string;
+}
+
 export default async function campaignsRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Body: CreateCampaignBody }>(
     '/',
@@ -146,7 +152,7 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
     },
   );
 
-  app.patch<{ Params: { id: string }; Body: { status: string } }>(
+  app.patch<{ Params: { id: string }; Body: PatchCampaignBody }>(
     '/:id',
     {
       preHandler: requireJwt,
@@ -158,17 +164,89 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
         },
         body: {
           type: 'object',
-          required: ['status'],
           additionalProperties: false,
           properties: {
             status: { type: 'string', enum: ['draft', 'active', 'closed'] },
+            reminders: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['send_at', 'channel', 'message_template'],
+                additionalProperties: false,
+                properties: {
+                  send_at: { type: 'string', format: 'date-time' },
+                  channel: { type: 'string', enum: ['email', 'sms', 'whatsapp'] },
+                  message_template: { type: 'string', minLength: 1 },
+                  only_if: { type: 'string', enum: ['not_submitted'] },
+                },
+              },
+            },
+            deadline: { type: 'string', format: 'date-time' },
           },
         },
       },
     },
     async (request, reply) => {
       const { id } = request.params;
-      const { status: newStatus } = request.body;
+      const { status: newStatus, reminders: newReminders, deadline: newDeadline } = request.body;
+
+      // Validate that at least one field is present
+      if (newStatus === undefined && newReminders === undefined && newDeadline === undefined) {
+        return reply.status(400).send({
+          error: {
+            code: 'MISSING_FIELDS',
+            message: 'At least one of status, reminders, or deadline must be provided',
+          },
+        });
+      }
+
+      // Fetch the campaign
+      const [campaign] = await db
+        .select()
+        .from(campaigns)
+        .where(and(eq(campaigns.id, id), eq(campaigns.tenantId, DEFAULT_TENANT_ID)));
+
+      if (!campaign) {
+        return reply
+          .status(404)
+          .send({ error: { code: 'NOT_FOUND', message: 'Campaign not found' } });
+      }
+
+      // Validate status transition if provided
+      if (newStatus !== undefined) {
+        const allowed = VALID_TRANSITIONS[campaign.status] ?? [];
+        if (!allowed.includes(newStatus)) {
+          return reply.status(400).send({
+            error: {
+              code: 'INVALID_STATUS_TRANSITION',
+              message: `Cannot transition from '${campaign.status}' to '${newStatus}'`,
+              field: 'status',
+            },
+          });
+        }
+      }
+
+      // Validate reminders update: not allowed on closed campaigns
+      if (newReminders !== undefined && campaign.status === 'closed') {
+        return reply.status(400).send({
+          error: {
+            code: 'INVALID_UPDATE',
+            message: 'Cannot update reminders on a closed campaign',
+            field: 'reminders',
+          },
+        });
+      }
+
+      // Validate deadline update: not allowed on closed campaigns
+      if (newDeadline !== undefined && campaign.status === 'closed') {
+        return reply.status(400).send({
+          error: {
+            code: 'INVALID_UPDATE',
+            message: 'Cannot update deadline on a closed campaign',
+            field: 'deadline',
+          },
+        });
+      }
 
       // Activation: delegate entirely to the service (token generation + event publish)
       if (newStatus === 'active') {
@@ -185,32 +263,21 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
         }
       }
 
-      // Other transitions (active → closed)
-      const [campaign] = await db
-        .select({ id: campaigns.id, status: campaigns.status })
-        .from(campaigns)
-        .where(and(eq(campaigns.id, id), eq(campaigns.tenantId, DEFAULT_TENANT_ID)));
-
-      if (!campaign) {
-        return reply
-          .status(404)
-          .send({ error: { code: 'NOT_FOUND', message: 'Campaign not found' } });
+      // Build update set with only provided fields
+      const updateSet: Record<string, unknown> = {};
+      if (newStatus !== undefined && newStatus !== 'active') {
+        updateSet.status = newStatus;
       }
-
-      const allowed = VALID_TRANSITIONS[campaign.status] ?? [];
-      if (!allowed.includes(newStatus)) {
-        return reply.status(400).send({
-          error: {
-            code: 'INVALID_STATUS_TRANSITION',
-            message: `Cannot transition from '${campaign.status}' to '${newStatus}'`,
-            field: 'status',
-          },
-        });
+      if (newReminders !== undefined) {
+        updateSet.reminders = newReminders;
+      }
+      if (newDeadline !== undefined) {
+        updateSet.deadline = new Date(newDeadline);
       }
 
       const [updated] = await db
         .update(campaigns)
-        .set({ status: newStatus })
+        .set(updateSet)
         .where(eq(campaigns.id, id))
         .returning();
 

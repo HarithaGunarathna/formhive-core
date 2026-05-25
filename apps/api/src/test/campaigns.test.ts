@@ -328,6 +328,73 @@ describe('PATCH /v1/campaigns/:id', () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it('updates reminders on an active campaign', async () => {
+    const id = await createDraftCampaign();
+    await app.inject({
+      method: 'PATCH',
+      url: `/v1/campaigns/${id}`,
+      headers: authHeader(),
+      payload: { status: 'active' },
+    });
+
+    const newReminders = [
+      {
+        send_at: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+        channel: 'email',
+        message_template: 'reminder',
+      },
+      {
+        send_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        channel: 'whatsapp',
+        message_template: 'final_warning',
+      },
+    ];
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/v1/campaigns/${id}`,
+      headers: authHeader(),
+      payload: { reminders: newReminders },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data.reminders).toEqual(newReminders);
+  });
+
+  it('rejects reminders update on a closed campaign with 400', async () => {
+    const id = await createDraftCampaign();
+    await app.inject({
+      method: 'PATCH',
+      url: `/v1/campaigns/${id}`,
+      headers: authHeader(),
+      payload: { status: 'active' },
+    });
+    await app.inject({
+      method: 'PATCH',
+      url: `/v1/campaigns/${id}`,
+      headers: authHeader(),
+      payload: { status: 'closed' },
+    });
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/v1/campaigns/${id}`,
+      headers: authHeader(),
+      payload: {
+        reminders: [
+          {
+            send_at: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+            channel: 'email',
+            message_template: 'reminder',
+          },
+        ],
+      },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.code).toBe('INVALID_UPDATE');
+  });
 });
 
 describe('GET /v1/campaigns/:id/submissions', () => {

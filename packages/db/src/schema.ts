@@ -72,3 +72,23 @@ export const submissions = pgTable('submissions', {
   submittedAt: timestamp('submitted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const campaignReminderLog = pgTable(
+  'campaign_reminder_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    campaignId: uuid('campaign_id')
+      .notNull()
+      .references(() => campaigns.id),
+    reminderIndex: integer('reminder_index').notNull(),
+    recipientRef: text('recipient_ref').notNull(),
+    sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    uniqueReminder: unique('campaign_reminder_log_campaign_id_reminder_index_recipient_ref_unique').on(
+      table.campaignId,
+      table.reminderIndex,
+      table.recipientRef,
+    ),
+  }),
+);

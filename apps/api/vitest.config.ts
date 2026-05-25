@@ -11,5 +11,6 @@ export default defineConfig({
     // Vite's esbuild transform instead of Node's native require().
     pool: 'vmForks',
     fileParallelism: false, // test files share a DB — run sequentially
+    exclude: ['node_modules', 'dist'],
   },
 });
