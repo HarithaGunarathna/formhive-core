@@ -53,16 +53,21 @@ export async function runReminderDispatch(eventBus: EventBus, formBaseUrl: strin
         }
 
         for (const recipientRef of recipientRefs) {
-          const alreadySent = await db
-            .select()
-            .from(campaignReminderLog)
-            .where(
-              and(
-                eq(campaignReminderLog.campaignId, campaign.id),
-                eq(campaignReminderLog.reminderIndex, reminderIndex),
-                eq(campaignReminderLog.recipientRef, recipientRef),
-              ),
-            );
+          let alreadySent = [];
+          try {
+            alreadySent = await db
+              .select()
+              .from(campaignReminderLog)
+              .where(
+                and(
+                  eq(campaignReminderLog.campaignId, campaign.id),
+                  eq(campaignReminderLog.reminderIndex, reminderIndex),
+                  eq(campaignReminderLog.recipientRef, recipientRef),
+                ),
+              );
+          } catch {
+            // campaignReminderLog table may not exist if migrations haven't run
+          }
 
           if (alreadySent.length > 0) {
             continue;
@@ -116,12 +121,16 @@ export async function runReminderDispatch(eventBus: EventBus, formBaseUrl: strin
 
           await eventBus.publish(NOTIFICATIONS_STREAM, EventName.NOTIFICATION_SEND, payload);
 
-          await db.insert(campaignReminderLog).values({
-            campaignId: campaign.id,
-            reminderIndex,
-            recipientRef,
-            sentAt: now,
-          });
+          try {
+            await db.insert(campaignReminderLog).values({
+              campaignId: campaign.id,
+              reminderIndex,
+              recipientRef,
+              sentAt: now,
+            });
+          } catch {
+            // campaignReminderLog table may not exist if migrations haven't run
+          }
 
           console.log(
             `[scheduler] sent reminder ${reminderIndex} for campaign ${campaign.id} to ${recipientRef}`,

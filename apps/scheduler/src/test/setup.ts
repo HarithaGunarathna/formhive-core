@@ -14,7 +14,11 @@ if (!REDIS_URL) throw new Error('REDIS_URL environment variable is not set');
 export const redis = new Redis(REDIS_URL);
 
 export async function cleanDb(): Promise<void> {
-  await db.delete(campaignReminderLog);
+  try {
+    await db.delete(campaignReminderLog);
+  } catch {
+    // Table may not exist if migrations haven't run yet
+  }
   await db.delete(submissions);
   await db.delete(campaigns);
   await db.delete(formSchemas);
