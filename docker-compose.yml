@@ -43,7 +43,7 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - .env
+      - .env.docker
     restart: unless-stopped
 
   form:
@@ -58,7 +58,7 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - .env
+      - .env.docker
     restart: unless-stopped
 
   validator:
@@ -71,7 +71,7 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - .env
+      - .env.docker
     restart: unless-stopped
 
   scheduler:
@@ -84,7 +84,7 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - .env
+      - .env.docker
     restart: unless-stopped
 
   notification:
@@ -97,7 +97,7 @@ services:
       redis:
         condition: service_healthy
     env_file:
-      - .env
+      - .env.docker
     restart: unless-stopped
 
 volumes:
