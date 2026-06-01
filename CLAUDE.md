@@ -278,10 +278,26 @@ Query. It is the admin UI for non-developer tenants.
 
 It communicates with apps/api only — never directly with the DB or Redis.
 All API calls go through src/api/client.ts (axios with JWT interceptor).
-The Vite dev server proxies /api → http://localhost:3000 so there are no
-CORS issues in development.
+The axios baseURL is '/api' in all environments. In development the Vite dev
+server proxies /api → http://localhost:3000. In Docker, nginx proxies /api/
+to http://api:3000/ (stripping the prefix) — matching the Vite proxy exactly.
 
 Port: 3002 in dev (pnpm --filter dashboard dev).
+
+### Docker / production build
+
+The dashboard Dockerfile uses a two-stage build:
+- Stage 1 (node:20-alpine): installs pnpm, installs deps, runs `vite build`
+  (not `tsc && vite build` — tsc is skipped in Docker because test files
+  contain partial mock objects that are valid at runtime but fail strict
+  type-checking; type safety is verified by `pnpm test` in development)
+- Stage 2 (nginx:alpine): serves dist/ as static files via nginx
+
+nginx.conf caches /assets/* for 1 year (Vite hashes filenames), sets no-cache
+on HTML, and falls back to index.html for all unmatched routes (React Router).
+
+VITE_API_URL is accepted as a Docker build arg (default: http://localhost:3000)
+for future use. The nginx proxy is what routes /api/* at runtime.
 
 ---
 
