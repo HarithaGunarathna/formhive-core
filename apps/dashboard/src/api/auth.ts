@@ -12,12 +12,34 @@ interface TokenResponse {
 export function useLogin() {
   const login = useAuthStore((s) => s.login);
   return useMutation({
-    mutationFn: async (apiKey: string): Promise<TokenResponse> => {
-      const res = await apiClient.post<ApiEnvelope<TokenResponse>>('/v1/auth/token', {
-        api_key: apiKey,
-      });
+    mutationFn: async (credentials: {
+      account_name: string;
+      password: string;
+    }): Promise<TokenResponse> => {
+      const res = await apiClient.post<ApiEnvelope<TokenResponse>>(
+        '/v1/auth/login',
+        credentials,
+      );
       return unwrap(res.data, res.status);
     },
     onSuccess: ({ token }) => login(token),
+  });
+}
+
+export interface RegisterResult {
+  account_name: string;
+  message: string;
+}
+
+export function useRegister() {
+  return useMutation({
+    mutationFn: async (data: {
+      account_name: string;
+      email: string;
+      password: string;
+    }): Promise<RegisterResult> => {
+      const res = await apiClient.post<ApiEnvelope<RegisterResult>>('/v1/auth/register', data);
+      return unwrap(res.data, res.status);
+    },
   });
 }

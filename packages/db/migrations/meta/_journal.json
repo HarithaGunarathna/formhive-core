@@ -15,6 +15,20 @@
       "when": 1779623376357,
       "tag": "0001_steady_kulan_gath",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780612888925,
+      "tag": "0002_narrow_paladin",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780700000000,
+      "tag": "0003_add_password_auth",
+      "breakpoints": true
     }
   ]
 }

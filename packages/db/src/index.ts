@@ -4,3 +4,5 @@
 export * from './schema';
 export { db } from './client';
 export type { Database } from './client';
+export { provisionTenant, authenticateTenant } from './provisioner';
+export type { ProvisionResult } from './provisioner';

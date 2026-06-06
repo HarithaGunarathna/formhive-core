@@ -7,11 +7,6 @@ import { db } from '../../../lib/db';
 import { formSchemas } from '@formhive/db';
 import { requireJwt } from '../../../lib/auth';
 
-// Phase 1: single-tenant constant. Replace with request.user.tenantId in Phase 2.
-// Requires seed: INSERT INTO tenants (id, name, api_key_hash, plan)
-// VALUES ('00000000-0000-0000-0000-000000000001', ...)
-const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
-
 const FIELD_TYPES = [
   'text',
   'decimal',
@@ -22,6 +17,7 @@ const FIELD_TYPES = [
   'geopoint',
   'image',
   'audio',
+  'file',
 ];
 
 const fieldItemSchema = {
@@ -69,17 +65,17 @@ export default async function schemasRoutes(app: FastifyInstance): Promise<void>
       const { name, fields } = request.body;
       const [record] = await db
         .insert(formSchemas)
-        .values({ tenantId: DEFAULT_TENANT_ID, name, fields })
+        .values({ tenantId: request.user.tenantId, name, fields })
         .returning();
       return reply.status(201).send({ data: record });
     },
   );
 
-  app.get('/', { preHandler: requireJwt }, async (_request, reply) => {
+  app.get('/', { preHandler: requireJwt }, async (request, reply) => {
     const records = await db
       .select()
       .from(formSchemas)
-      .where(eq(formSchemas.tenantId, DEFAULT_TENANT_ID))
+      .where(eq(formSchemas.tenantId, request.user.tenantId))
       .orderBy(desc(formSchemas.createdAt));
     return reply.send({ data: records });
   });
@@ -101,7 +97,7 @@ export default async function schemasRoutes(app: FastifyInstance): Promise<void>
       const [record] = await db
         .select()
         .from(formSchemas)
-        .where(and(eq(formSchemas.id, id), eq(formSchemas.tenantId, DEFAULT_TENANT_ID)));
+        .where(and(eq(formSchemas.id, id), eq(formSchemas.tenantId, request.user.tenantId)));
       if (!record) {
         return reply
           .status(404)

@@ -64,7 +64,14 @@ export function buildJsonSchema(fields: FormField[]): BuiltJsonSchema {
         break;
       }
 
-      // text / geopoint / image / audio — accept any non-empty string
+      // image / audio / file — value is a storage URL; accept any non-empty string,
+      // no length constraints (URLs vary in length based on key structure)
+      case 'image':
+      case 'audio':
+        properties[field.id] = { type: 'string' };
+        break;
+
+      // text / geopoint — accept any non-empty string with optional length constraints
       default:
         properties[field.id] = {
           type: 'string',

@@ -4,6 +4,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoginPage } from '@/pages/LoginPage';
+import { RegisterPage } from '@/pages/RegisterPage';
 import { CampaignsPage } from '@/pages/CampaignsPage';
 import { CampaignDetailPage } from '@/pages/CampaignDetailPage';
 import { NewCampaignPage } from '@/pages/NewCampaignPage';
@@ -29,6 +30,14 @@ export function AppRouter() {
         element={
           <PublicOnlyRoute>
             <LoginPage />
+          </PublicOnlyRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <PublicOnlyRoute>
+            <RegisterPage />
           </PublicOnlyRoute>
         }
       />

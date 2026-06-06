@@ -2,60 +2,73 @@
 // Copyright (C) 2025 Formhive Contributors
 
 /**
- * Creates (or re-keys) the single seed tenant used by integration tests.
+ * Creates the default admin tenant for local development and integration tests.
  *
  * Run:  pnpm db:seed
  *
  * What it does:
  *   1. Loads .env from the repo root.
- *   2. Inserts a tenant row with the fixed SEED_TENANT_ID, or updates its
- *      api_key_hash if the row already exists.
- *   3. Writes the new plaintext API key back into SEED_API_KEY in .env so
- *      `pnpm --filter api test` picks it up automatically.
+ *   2. Calls provisionTenant('formhive_admin', 'admin@formhive.com', 'changeme123').
+ *      If the account name already exists, skips creation.
+ *   3. Generates a fresh internal API key and writes it to SEED_API_KEY in .env
+ *      (integration tests use this key via POST /v1/auth/token).
  */
 
 import { config } from 'dotenv';
 import { resolve } from 'path';
-import { randomBytes } from 'crypto';
 import { readFileSync, writeFileSync } from 'fs';
-import bcrypt from 'bcryptjs';
 
 const ENV_PATH = resolve(__dirname, '../../../../.env');
-const SEED_TENANT_ID = '00000000-0000-0000-0000-000000000001';
+const SEED_ACCOUNT = 'formhive_admin';
+const SEED_EMAIL = 'admin@formhive.com';
+const SEED_PASSWORD = 'changeme123';
 
 async function main(): Promise<void> {
-  // Must run before any module that reads DATABASE_URL at load time.
   config({ path: ENV_PATH });
 
-  // Dynamic imports so DATABASE_URL is already set when @formhive/db initialises.
-  const { db, tenants } = await import('@formhive/db');
+  const { db, tenants, provisionTenant } = await import('@formhive/db');
   const { eq } = await import('drizzle-orm');
+  const bcrypt = await import('bcryptjs');
+  const { randomBytes } = await import('crypto');
 
-  const apiKey = randomBytes(32).toString('hex');
-  const apiKeyHash = await bcrypt.hash(apiKey, 10);
+  // Create or skip the seed tenant
+  const result = await provisionTenant(SEED_ACCOUNT, SEED_EMAIL, SEED_PASSWORD).catch(
+    (err: Error) => {
+      if (err.message === 'ACCOUNT_NAME_TAKEN') {
+        console.log('[seed] Admin tenant already exists, skipping creation');
+        return null;
+      }
+      throw err;
+    },
+  );
 
-  const [existing] = await db
-    .select({ id: tenants.id })
-    .from(tenants)
-    .where(eq(tenants.id, SEED_TENANT_ID));
-
-  if (existing) {
-    await db
-      .update(tenants)
-      .set({ apiKeyHash })
-      .where(eq(tenants.id, SEED_TENANT_ID));
-    console.log('✓ Seed tenant updated with new API key');
-  } else {
-    await db.insert(tenants).values({
-      id: SEED_TENANT_ID,
-      name: 'Default Tenant',
-      apiKeyHash,
-      plan: 'free',
-    });
-    console.log('✓ Seed tenant created');
+  if (result) {
+    console.log('─────────────────────────────────────');
+    console.log('[seed] Admin tenant created');
+    console.log(`  Account:  ${SEED_ACCOUNT}`);
+    console.log(`  Email:    ${SEED_EMAIL}`);
+    console.log(`  Password: ${SEED_PASSWORD}`);
+    console.log('  ⚠ Change this password after first login');
+    console.log('─────────────────────────────────────');
   }
 
-  // Write SEED_API_KEY into .env so tests can read it via process.env.
+  // Generate a fresh API key for the seed tenant and write it to .env.
+  // Integration tests authenticate via POST /v1/auth/token with this key.
+  const apiKey = `fh_live_${randomBytes(16).toString('hex')}`;
+  const hash = await bcrypt.hash(apiKey, 10);
+
+  const [seedTenant] = await db
+    .select({ id: tenants.id })
+    .from(tenants)
+    .where(eq(tenants.accountName, SEED_ACCOUNT));
+
+  if (!seedTenant) {
+    console.error('[seed] Could not find seed tenant after provisioning — aborting');
+    process.exit(1);
+  }
+
+  await db.update(tenants).set({ apiKeyHash: hash }).where(eq(tenants.accountName, SEED_ACCOUNT));
+
   let envContent = readFileSync(ENV_PATH, 'utf8');
   if (/^SEED_API_KEY=/m.test(envContent)) {
     envContent = envContent.replace(/^SEED_API_KEY=.*/m, `SEED_API_KEY=${apiKey}`);
@@ -64,11 +77,9 @@ async function main(): Promise<void> {
   }
   writeFileSync(ENV_PATH, envContent, 'utf8');
 
-  console.log('✓ SEED_API_KEY written to .env');
-  console.log(`  Tenant ID : ${SEED_TENANT_ID}`);
-  console.log(`  API Key   : ${apiKey}`);
+  console.log('[seed] SEED_API_KEY written to .env');
+  console.log('[seed] Done.');
 
-  // postgres-js holds an open connection pool — exit explicitly.
   process.exit(0);
 }
 

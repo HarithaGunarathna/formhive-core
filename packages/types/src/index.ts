@@ -23,7 +23,8 @@ export type XlsFormFieldType =
   | 'date'
   | 'geopoint'
   | 'image'
-  | 'audio';
+  | 'audio'
+  | 'file';
 
 export interface FormField {
   id: string;

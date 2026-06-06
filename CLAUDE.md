@@ -48,7 +48,7 @@ We are building the minimum that lets one real government department run a real 
 - Admin dashboard (React, basic campaign status view)
 
 **Out of scope for Phase 1 (do not build):**
-- Multi-tenancy (tenant_id columns exist in schema but are hardcoded to a default)
+- Multi-tenancy (tenant_id columns exist in schema; self-serve registration is live)
 - Billing
 - BYOD webhooks or local agent
 - Offline mobile SDK
@@ -193,11 +193,33 @@ Wrong (BLOCK before COUNT) will throw at runtime, not compile time.
 
 ---
 
-## Phase 1 simplification — campaign activation broadcasts to all tenant recipients
+## Multi-tenancy
+
+Every table has a `tenant_id` column. All queries must include
+`WHERE tenant_id = request.user.tenantId`.
+
+Two auth flows both produce the same JWT shape `{ tenantId, plan, accountName }`:
+1. **UI users:** `POST /v1/auth/login` — account_name + password
+2. **Developer API:** `POST /v1/auth/token` — internal api_key
+
+Route handlers read `request.user.tenantId` — same regardless of which flow
+was used.
+
+**Account name rules:** `^[a-z0-9_]{3,30}$`
+Validated in `provisionTenant()` in `packages/db/src/provisioner.ts` and at the
+API layer via Fastify JSON Schema pattern.
+
+Never hardcode a `tenant_id`. Use `pnpm db:seed` for the default dev tenant:
+- Account: `formhive_admin` / Password: `changeme123`
+- SEED_API_KEY is written to `.env` for integration tests
+
+---
+
+## Campaign activation broadcasts to all tenant recipients
 
 When a campaign transitions to 'active', the platform creates one submission row
-for every recipient in the tenant. There is no per-campaign recipient group in
-Phase 1. This is replaced with recipient_group_id logic in Phase 2.
+for every recipient in the tenant. There is no per-campaign recipient group yet.
+This is replaced with recipient_group_id logic in Phase 2.
 
 
 ---

@@ -7,8 +7,6 @@ import { db } from '../../../lib/db';
 import { recipients } from '@formhive/db';
 import { requireJwt } from '../../../lib/auth';
 
-const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
-
 interface RecipientInput {
   ref: string;
   name?: string;
@@ -48,19 +46,19 @@ export default async function recipientsRoutes(app: FastifyInstance): Promise<vo
     },
     async (request, reply) => {
       const { recipients: inputs } = request.body;
+      const tenantId = request.user.tenantId;
 
       const refs = inputs.map((r) => r.ref);
 
-      // Pre-select existing refs to compute created vs updated counts after upsert.
       const existing = await db
         .select({ ref: recipients.ref })
         .from(recipients)
-        .where(and(eq(recipients.tenantId, DEFAULT_TENANT_ID), inArray(recipients.ref, refs)));
+        .where(and(eq(recipients.tenantId, tenantId), inArray(recipients.ref, refs)));
 
       const existingRefs = new Set(existing.map((r) => r.ref));
 
       const rows = inputs.map((r) => ({
-        tenantId: DEFAULT_TENANT_ID,
+        tenantId,
         ref: r.ref,
         name: r.name ?? null,
         channels: r.channels,
@@ -110,7 +108,7 @@ export default async function recipientsRoutes(app: FastifyInstance): Promise<vo
       const rows = await db
         .select()
         .from(recipients)
-        .where(eq(recipients.tenantId, DEFAULT_TENANT_ID))
+        .where(eq(recipients.tenantId, request.user.tenantId))
         .orderBy(desc(recipients.createdAt))
         .limit(limit)
         .offset(offset);

@@ -23,7 +23,6 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
   };
 });
 
-// useLogin wraps useMutation, so mock the auth module to avoid double-wrapping issues
 vi.mock('@/api/auth', () => ({
   useLogin: vi.fn(),
 }));
@@ -43,7 +42,7 @@ describe('LoginPage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders API key input and sign in button', () => {
+  it('renders account name input, password input, and sign in button', () => {
     vi.mocked(useLogin).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
@@ -53,27 +52,31 @@ describe('LoginPage', () => {
 
     renderLogin();
 
-    expect(screen.getByLabelText(/api key/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/account name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
-  it('shows error message when login mutation returns an error', async () => {
+  it('shows error message when login mutation rejects', async () => {
     vi.mocked(useLogin).mockReturnValue({
-      mutateAsync: vi.fn().mockRejectedValue(new Error('Invalid API key')),
+      mutateAsync: vi.fn().mockRejectedValue(new Error('INVALID_CREDENTIALS')),
       isPending: false,
-      isError: true,
-      error: new Error('Invalid API key'),
+      isError: false,
+      error: null,
     } as ReturnType<typeof useMutation>);
 
     renderLogin();
 
-    fireEvent.change(screen.getByLabelText(/api key/i), {
-      target: { value: 'bad-key' },
+    fireEvent.change(screen.getByLabelText(/account name/i), {
+      target: { value: 'agri_ministry' },
+    });
+    fireEvent.change(screen.getByLabelText(/^password$/i), {
+      target: { value: 'wrongpassword' },
     });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/invalid api key/i)).toBeInTheDocument();
+      expect(screen.getByText(/invalid account name or password/i)).toBeInTheDocument();
     });
   });
 
@@ -87,8 +90,11 @@ describe('LoginPage', () => {
 
     renderLogin();
 
-    fireEvent.change(screen.getByLabelText(/api key/i), {
-      target: { value: 'valid-key' },
+    fireEvent.change(screen.getByLabelText(/account name/i), {
+      target: { value: 'agri_ministry' },
+    });
+    fireEvent.change(screen.getByLabelText(/^password$/i), {
+      target: { value: 'testpassword' },
     });
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
 

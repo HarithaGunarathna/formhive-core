@@ -5,7 +5,9 @@ import { integer, jsonb, pgTable, text, timestamp, unique, uuid } from 'drizzle-
 
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
+  accountName: text('account_name').notNull().unique(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
   apiKeyHash: text('api_key_hash').notNull().unique(),
   plan: text('plan').notNull().default('free'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

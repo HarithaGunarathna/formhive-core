@@ -7,7 +7,7 @@ export type WizardFieldType =
   | 'integer'
   | 'select_one'
   | 'date'
-  | 'image';
+  | 'file';
 
 export interface WizardField {
   uid: string;

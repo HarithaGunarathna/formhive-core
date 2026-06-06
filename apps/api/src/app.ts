@@ -2,10 +2,11 @@
 // Copyright (C) 2025 Formhive Contributors
 
 import Fastify from 'fastify';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import fastifyEnv from '@fastify/env';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import rateLimit from '@fastify/rate-limit';
 import healthRoutes from './routes/health/index';
 import authRoutes from './routes/v1/auth/index';
 import schemasRoutes from './routes/v1/schemas/index';
@@ -26,8 +27,8 @@ declare module 'fastify' {
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    payload: { tenantId: string; plan: string };
-    user: { tenantId: string; plan: string };
+    payload: { tenantId: string; plan: string; accountName: string };
+    user: { tenantId: string; plan: string; accountName: string };
   }
 }
 
@@ -60,6 +61,13 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(jwt, {
     secret: process.env['JWT_SECRET'] ?? '',
+  });
+
+  await app.register(rateLimit, {
+    global: true,
+    max: 100,
+    timeWindow: '1 minute',
+    keyGenerator: (request: FastifyRequest) => request.user?.tenantId ?? request.ip,
   });
 
   await app.register(healthRoutes, { prefix: '/health' });

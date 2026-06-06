@@ -18,3 +18,5 @@ and what alternatives were considered.
 | [010](010-vitest-over-jest.md) | Vitest over Jest | Accepted | 2025-02-01 |
 | [011](011-no-autoload-in-tested-apps.md) | No @fastify/autoload in tested apps | Accepted | 2025-02-01 |
 | [012](012-push-model-over-enumerator-model.md) | Push model over enumerator model | Accepted | 2025-01-15 |
+| [013](013-file-uploads-object-storage.md) | File uploads in object storage, not PostgreSQL | Accepted | 2026-06-05 |
+| [014](014-account-system-multi-tenancy.md) | Account-based authentication and multi-tenancy | Accepted | 2026-06-05 |

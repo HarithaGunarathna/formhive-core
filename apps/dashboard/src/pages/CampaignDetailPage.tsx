@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2025 Formhive contributors
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Eye } from 'lucide-react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
@@ -419,9 +419,37 @@ function SubmissionDataDialog({
   );
 }
 
-function renderValue(v: unknown): string {
+const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif']);
+const AUDIO_EXTS = new Set(['mp3', 'm4a', 'ogg', 'wav', 'webm']);
+
+function renderValue(v: unknown): React.ReactNode {
   if (v === null || v === undefined) return '—';
-  if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (typeof v === 'string') {
+    if (/^https?:\/\//.test(v)) {
+      const ext = v.split('?')[0].split('.').pop()?.toLowerCase() ?? '';
+      if (IMAGE_EXTS.has(ext)) {
+        return (
+          <a href={v} target="_blank" rel="noreferrer">
+            <img
+              src={v}
+              alt="submission"
+              className="max-w-full max-h-48 rounded cursor-pointer hover:opacity-90"
+            />
+          </a>
+        );
+      }
+      if (AUDIO_EXTS.has(ext)) {
+        return <audio controls src={v} className="w-full mt-1" />;
+      }
+      return (
+        <a href={v} target="_blank" rel="noreferrer" className="underline text-[var(--color-foreground)] hover:opacity-70">
+          Download file ↗
+        </a>
+      );
+    }
+    return v;
+  }
   return JSON.stringify(v);
 }
 

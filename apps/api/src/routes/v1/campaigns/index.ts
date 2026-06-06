@@ -8,8 +8,6 @@ import { campaigns, submissions, formSchemas } from '@formhive/db';
 import { requireJwt } from '../../../lib/auth';
 import { activateCampaign, ServiceError } from '../../../services/campaign.service';
 
-const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001';
-
 const VALID_TRANSITIONS: Record<string, string[]> = {
   draft: ['active'],
   active: ['closed'],
@@ -74,11 +72,12 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
     },
     async (request, reply) => {
       const { name, schema_id, deadline, reminders, webhook_url, status } = request.body;
+      const tenantId = request.user.tenantId;
 
       const [schema] = await db
         .select({ id: formSchemas.id })
         .from(formSchemas)
-        .where(and(eq(formSchemas.id, schema_id), eq(formSchemas.tenantId, DEFAULT_TENANT_ID)));
+        .where(and(eq(formSchemas.id, schema_id), eq(formSchemas.tenantId, tenantId)));
       if (!schema) {
         return reply
           .status(404)
@@ -88,7 +87,7 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
       const [record] = await db
         .insert(campaigns)
         .values({
-          tenantId: DEFAULT_TENANT_ID,
+          tenantId,
           name,
           schemaId: schema_id,
           deadline: new Date(deadline),
@@ -101,11 +100,11 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
     },
   );
 
-  app.get('/', { preHandler: requireJwt }, async (_request, reply) => {
+  app.get('/', { preHandler: requireJwt }, async (request, reply) => {
     const rows = await db
       .select()
       .from(campaigns)
-      .where(eq(campaigns.tenantId, DEFAULT_TENANT_ID))
+      .where(eq(campaigns.tenantId, request.user.tenantId))
       .orderBy(desc(campaigns.createdAt));
     return reply.send({ data: rows });
   });
@@ -124,11 +123,12 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
     },
     async (request, reply) => {
       const { id } = request.params;
+      const tenantId = request.user.tenantId;
 
       const [campaign] = await db
         .select()
         .from(campaigns)
-        .where(and(eq(campaigns.id, id), eq(campaigns.tenantId, DEFAULT_TENANT_ID)));
+        .where(and(eq(campaigns.id, id), eq(campaigns.tenantId, tenantId)));
 
       if (!campaign) {
         return reply
@@ -144,7 +144,7 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
           invalid: sql<number>`COUNT(*) FILTER (WHERE ${submissions.status} = 'invalid')::int`,
         })
         .from(submissions)
-        .where(and(eq(submissions.campaignId, id), eq(submissions.tenantId, DEFAULT_TENANT_ID)));
+        .where(and(eq(submissions.campaignId, id), eq(submissions.tenantId, tenantId)));
 
       return reply.send({
         data: { ...campaign, summary: summary ?? { total: 0, submitted: 0, pending: 0, invalid: 0 } },
@@ -189,8 +189,8 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
     async (request, reply) => {
       const { id } = request.params;
       const { status: newStatus, reminders: newReminders, deadline: newDeadline } = request.body;
+      const tenantId = request.user.tenantId;
 
-      // Validate that at least one field is present
       if (newStatus === undefined && newReminders === undefined && newDeadline === undefined) {
         return reply.status(400).send({
           error: {
@@ -200,11 +200,10 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
         });
       }
 
-      // Fetch the campaign
       const [campaign] = await db
         .select()
         .from(campaigns)
-        .where(and(eq(campaigns.id, id), eq(campaigns.tenantId, DEFAULT_TENANT_ID)));
+        .where(and(eq(campaigns.id, id), eq(campaigns.tenantId, tenantId)));
 
       if (!campaign) {
         return reply
@@ -212,7 +211,6 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
           .send({ error: { code: 'NOT_FOUND', message: 'Campaign not found' } });
       }
 
-      // Validate status transition if provided
       if (newStatus !== undefined) {
         const allowed = VALID_TRANSITIONS[campaign.status] ?? [];
         if (!allowed.includes(newStatus)) {
@@ -226,7 +224,6 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
         }
       }
 
-      // Validate reminders update: not allowed on closed campaigns
       if (newReminders !== undefined && campaign.status === 'closed') {
         return reply.status(400).send({
           error: {
@@ -237,7 +234,6 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
         });
       }
 
-      // Validate deadline update: not allowed on closed campaigns
       if (newDeadline !== undefined && campaign.status === 'closed') {
         return reply.status(400).send({
           error: {
@@ -248,7 +244,6 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
         });
       }
 
-      // Activation: delegate entirely to the service (token generation + event publish)
       if (newStatus === 'active') {
         try {
           const updated = await activateCampaign(id);
@@ -263,7 +258,6 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
         }
       }
 
-      // Build update set with only provided fields
       const updateSet: Record<string, unknown> = {};
       if (newStatus !== undefined && newStatus !== 'active') {
         updateSet.status = newStatus;
@@ -278,7 +272,7 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
       const [updated] = await db
         .update(campaigns)
         .set(updateSet)
-        .where(eq(campaigns.id, id))
+        .where(and(eq(campaigns.id, id), eq(campaigns.tenantId, tenantId)))
         .returning();
 
       return reply.send({ data: updated });
@@ -309,11 +303,12 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
       const page = request.query.page ?? 1;
       const limit = request.query.limit ?? 50;
       const offset = (page - 1) * limit;
+      const tenantId = request.user.tenantId;
 
       const [campaign] = await db
         .select({ id: campaigns.id })
         .from(campaigns)
-        .where(and(eq(campaigns.id, id), eq(campaigns.tenantId, DEFAULT_TENANT_ID)));
+        .where(and(eq(campaigns.id, id), eq(campaigns.tenantId, tenantId)));
 
       if (!campaign) {
         return reply
@@ -324,7 +319,7 @@ export default async function campaignsRoutes(app: FastifyInstance): Promise<voi
       const rows = await db
         .select()
         .from(submissions)
-        .where(and(eq(submissions.campaignId, id), eq(submissions.tenantId, DEFAULT_TENANT_ID)))
+        .where(and(eq(submissions.campaignId, id), eq(submissions.tenantId, tenantId)))
         .orderBy(desc(submissions.createdAt))
         .limit(limit)
         .offset(offset);

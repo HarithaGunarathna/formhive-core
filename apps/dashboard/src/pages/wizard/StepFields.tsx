@@ -25,7 +25,7 @@ const FIELD_TYPES: Array<{ value: WizardFieldType; label: string }> = [
   { value: 'integer', label: 'Integer' },
   { value: 'select_one', label: 'Single choice' },
   { value: 'date', label: 'Date' },
-  { value: 'image', label: 'Image' },
+  { value: 'file', label: 'File attachment' },
 ];
 
 let UID = 0;
