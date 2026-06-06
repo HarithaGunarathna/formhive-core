@@ -11,9 +11,11 @@
 - 📨 **Push model** — the platform reaches out to recipients; they don't have to find a form
 - 🔔 **Smart reminders** — automatically skips recipients who have already submitted
 - 📋 **XLSForm-compatible** — import existing KoboToolbox / ODK form schemas directly
+- 📎 **File uploads** — image, audio, and file fields stream to S3-compatible object storage
+- 🏢 **Multi-tenant** — organisations self-register with account name + password; data is fully isolated per tenant
 - 🏠 **Self-hostable** — AGPL-3.0, runs on any Docker host, one `docker compose up`
 
-> **Status:** Phase 1 — single tenant, core collection engine. Real WhatsApp/SMS delivery integrations are Phase 2.
+> **Status:** Multi-tenant account system and object-storage file uploads are live. Real WhatsApp/SMS delivery integrations are still stubbed (Phase 2).
 
 ---
 
@@ -23,12 +25,14 @@ Six microservices communicate exclusively via **Redis Streams** — no direct HT
 
 | Service | Role | Port |
 |---|---|---|
-| `api` | Auth, schemas, recipients, campaigns, submissions | 3000 |
-| `form` | Tokenised form renderer + submission handler | 3001 |
+| `api` | Account auth, schemas, recipients, campaigns, submissions | 3000 |
+| `form` | Tokenised form renderer + submission + file upload handler | 3001 |
 | `validator` | Ajv schema validation, emits result events | — |
 | `scheduler` | Reminder dispatch + campaign closer (cron) | — |
 | `notification` | Email / SMS / WhatsApp delivery | — |
 | `dashboard` | React admin SPA | 3002 |
+
+Backing services: **PostgreSQL** (data), **Redis** (event bus), **MinIO / Cloudflare R2** (object storage for uploaded files).
 
 ---
 
@@ -40,18 +44,27 @@ Six microservices communicate exclusively via **Redis Streams** — no direct HT
 git clone <repo-url> && cd formhive-core
 pnpm install
 cp .env.example .env          # set JWT_SECRET at minimum
-docker compose up -d          # starts postgres + redis
+docker compose up -d          # starts postgres + redis + minio
 pnpm db:migrate && pnpm db:seed
 pnpm dev                      # all services start
 ```
+
+`pnpm db:seed` creates the default admin tenant (account `formhive_admin`,
+password `changeme123`) and writes its API key to `SEED_API_KEY` in `.env`.
+Sign in to the dashboard at <http://localhost:3002> with those credentials,
+or register a new organisation from the sign-up page.
 
 ---
 
 <details>
 <summary><strong>API quickstart</strong> — token → schema → campaign → form link</summary>
 
+UI users sign in with account name + password (`POST /v1/auth/login`).
+The flow below uses the developer API-key path (`POST /v1/auth/token`) for
+scripting — the key is in `SEED_API_KEY` after `pnpm db:seed`.
+
 ```bash
-# 1 — Get an auth token
+# 1 — Get an auth token (developer API-key flow)
 TOKEN=$(curl -s http://localhost:3000/v1/auth/token \
   -X POST -H "Content-Type: application/json" \
   -d '{"api_key":"<SEED_API_KEY>"}' | jq -r '.data.token')
@@ -95,6 +108,8 @@ curl -s http://localhost:3000/v1/campaigns/$CAMPAIGN_ID/submissions \
 | ORM | Drizzle ORM |
 | Database | PostgreSQL 16 + JSONB |
 | Event bus | Redis 7 Streams |
+| Object storage | MinIO (dev) / Cloudflare R2 (prod), S3-compatible |
+| Auth | Account name + password (UI) · API key (developer) · JWT |
 | Monorepo | pnpm workspaces + Turborepo |
 | Language | TypeScript (strict) |
 | Tests | Vitest — integration tests against real DB + Redis |
