@@ -12,7 +12,7 @@
   "dependencies": {
     "@formhive/events": "workspace:*",
     "ioredis": "^5.4.1",
-    "nodemailer": "^6.9.14"
+    "nodemailer": "^9.0.1"
   },
   "devDependencies": {
     "@types/node": "^20.14.12",
