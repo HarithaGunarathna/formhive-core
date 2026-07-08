@@ -16,9 +16,9 @@
     "@formhive/db": "workspace:*",
     "@formhive/events": "workspace:*",
     "dotenv": "^16.4.5",
-    "drizzle-orm": "^0.33.0",
+    "drizzle-orm": "^0.45.2",
     "ioredis": "^5.4.1",
-    "nanoid": "^4.0.2",
+    "nanoid": "^3.3.13",
     "node-cron": "^3.0.3"
   },
   "devDependencies": {
@@ -26,6 +26,6 @@
     "@types/node-cron": "^3.0.11",
     "tsx": "^4.16.2",
     "typescript": "^5.5.4",
-    "vitest": "^4.1.7"
+    "vitest": "^3.2.6"
   }
 }

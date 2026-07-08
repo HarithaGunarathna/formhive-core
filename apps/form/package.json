@@ -22,14 +22,14 @@
     "@formhive/db": "workspace:*",
     "@formhive/events": "workspace:*",
     "@formhive/types": "workspace:*",
-    "drizzle-orm": "^0.33.0",
-    "fastify": "^4.28.1",
+    "drizzle-orm": "^0.45.2",
+    "fastify": "^5.8.5",
     "ioredis": "^5.4.1"
   },
   "devDependencies": {
     "@types/node": "^20.14.12",
     "tsx": "^4.16.2",
     "typescript": "^5.5.4",
-    "vitest": "^4.1.7"
+    "vitest": "^3.2.6"
   }
 }
