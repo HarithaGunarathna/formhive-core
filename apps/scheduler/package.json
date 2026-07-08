@@ -16,7 +16,7 @@
     "@formhive/db": "workspace:*",
     "@formhive/events": "workspace:*",
     "dotenv": "^16.4.5",
-    "drizzle-orm": "^0.33.0",
+    "drizzle-orm": "^0.45.2",
     "ioredis": "^5.4.1",
     "nanoid": "^4.0.2",
     "node-cron": "^3.0.3"

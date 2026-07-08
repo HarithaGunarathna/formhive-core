@@ -23,7 +23,7 @@
     "@formhive/types": "workspace:*",
     "bcryptjs": "^3.0.3",
     "dotenv": "^16.4.5",
-    "drizzle-orm": "^0.33.0",
+    "drizzle-orm": "^0.45.2",
     "fastify": "^4.28.1",
     "ioredis": "^5.4.1",
     "nanoid": "^3.3.7"

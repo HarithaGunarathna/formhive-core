@@ -22,7 +22,7 @@
     "@formhive/db": "workspace:*",
     "@formhive/events": "workspace:*",
     "@formhive/types": "workspace:*",
-    "drizzle-orm": "^0.33.0",
+    "drizzle-orm": "^0.45.2",
     "fastify": "^4.28.1",
     "ioredis": "^5.4.1"
   },
